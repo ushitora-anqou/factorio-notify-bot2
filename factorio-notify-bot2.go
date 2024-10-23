@@ -40,25 +40,12 @@ func (d *Discord) sendMessage(message string) error {
 	return nil
 }
 
-func doReadCheckNotifyLoop(d *Discord, filename string) error {
-	// Open the log file
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// Go to the end of the file
-	_, err = file.Seek(0, 2)
-	if err != nil {
-		return err
-	}
-
+func doReadCheckNotifyLoop(d *Discord, src io.Reader) error {
 	// Regex for check
 	regex := regexp.MustCompile(`^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} \[(JOIN|LEAVE)\] (.+) (?:joined the game|left the game)$`)
 
 	// Read each line and check&notify
-	reader := bufio.NewReader(file)
+	reader := bufio.NewReader(src)
 	for {
 		// Read
 		line, err := reader.ReadString('\n')
@@ -69,6 +56,7 @@ func doReadCheckNotifyLoop(d *Discord, filename string) error {
 		if err != nil {
 			return err
 		}
+		fmt.Print(line)
 		line = strings.TrimSpace(line)
 
 		// Check
@@ -81,7 +69,6 @@ func doReadCheckNotifyLoop(d *Discord, filename string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(line)
 	}
 }
 
@@ -91,12 +78,8 @@ func main() {
 		log.Fatal("Set environment variable DISCORD_WEBHOOK_URL")
 	}
 
-	if len(os.Args) <= 1 {
-		log.Fatalf("Usage: %s LOG-FILE", os.Args[0])
-	}
-
 	discord := &Discord{webhookUrl}
-	err := doReadCheckNotifyLoop(discord, os.Args[1])
+	err := doReadCheckNotifyLoop(discord, os.Stdin)
 	if err != nil {
 		log.Fatal(err)
 	}
