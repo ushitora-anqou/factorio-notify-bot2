@@ -116,7 +116,14 @@ func doMain() error {
 		doReadCheckNotifyLoop(discord, stdout)
 	}()
 
-	return cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitError.ExitCode())
+		}
+		return err
+	}
+
+	return nil
 }
 
 func main() {
