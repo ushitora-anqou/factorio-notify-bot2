@@ -87,7 +87,9 @@ func executeFactorio(ctx context.Context, args []string) (*exec.Cmd, io.Reader, 
 		return nil, nil, err
 	}
 
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return nil, nil, err
+	}
 
 	return cmd, stdout, nil
 }
