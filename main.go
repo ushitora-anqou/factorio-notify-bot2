@@ -21,17 +21,17 @@ import (
 )
 
 type Discord struct {
-	webhookUrl string
+	username, webhookUrl string
 }
 
-func (d *Discord) sendMessage(message string) error {
+func (d *Discord) sendMessage(username, message string) error {
 	// Encode the message to JSON
 	type DiscordReq struct {
 		Username string `json:"username"`
 		Content  string `json:"content"`
 	}
 	json, err := json.Marshal(DiscordReq{
-		Username: "Factrio Server Watcher", Content: message,
+		Username: username, Content: message,
 	})
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func doReadCheckNotifyLoop(d *Discord, src io.Reader) {
 		}
 
 		// Notify
-		err = d.sendMessage(line)
+		err = d.sendMessage(d.username, line)
 		if err != nil {
 			continue
 		}
@@ -95,11 +95,15 @@ func executeFactorio(ctx context.Context, args []string) (*exec.Cmd, io.Reader, 
 }
 
 func doMain() error {
+	username, ok := os.LookupEnv("DISCORD_WEBHOOK_USERNAME")
+	if !ok {
+		return errors.New("Set environment variable DISCORD_WEBHOOK_USERNAME")
+	}
 	webhookUrl, ok := os.LookupEnv("DISCORD_WEBHOOK_URL")
 	if !ok {
 		return errors.New("Set environment variable DISCORD_WEBHOOK_URL")
 	}
-	discord := &Discord{webhookUrl}
+	discord := &Discord{username, webhookUrl}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
