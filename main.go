@@ -74,13 +74,13 @@ func doReadCheckNotifyLoop(d *Discord, src io.Reader) {
 	}
 }
 
-func executeFactorio(ctx context.Context, args []string) (*exec.Cmd, io.Reader, error) {
+func executeFactorio(ctx context.Context, waitDelay time.Duration, args []string) (*exec.Cmd, io.Reader, error) {
 	cmd := exec.CommandContext(ctx, args[1], args[2:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Cancel = func() error {
 		return cmd.Process.Signal(os.Interrupt)
 	}
-	cmd.WaitDelay = 10 * time.Second
+	cmd.WaitDelay = waitDelay
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -105,10 +105,19 @@ func doMain() error {
 	}
 	discord := &Discord{username, webhookUrl}
 
+	waitDelay, ok := os.LookupEnv("WAIT_DELAY")
+	if !ok {
+		return errors.New("Set environment variable WAIT_DELAY")
+	}
+	waitDelayParsed, err := time.ParseDuration(waitDelay)
+	if err != nil {
+		return fmt.Errorf("failed to parse WAIT_DELAY: %w", err)
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cmd, stdout, err := executeFactorio(ctx, os.Args)
+	cmd, stdout, err := executeFactorio(ctx, waitDelayParsed, os.Args)
 	if err != nil {
 		return err
 	}
