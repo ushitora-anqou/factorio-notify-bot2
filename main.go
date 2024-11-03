@@ -78,7 +78,12 @@ func executeFactorio(ctx context.Context, waitDelay time.Duration, args []string
 	cmd := exec.CommandContext(ctx, args[1], args[2:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Cancel = func() error {
-		return cmd.Process.Signal(os.Interrupt)
+		if err := cmd.Process.Signal(os.Interrupt); err != nil {
+			return err
+		}
+		// make cmd.Wait return the command's usual exit status by returning
+		// os.ErrProcessDone
+		return os.ErrProcessDone
 	}
 	cmd.WaitDelay = waitDelay
 
